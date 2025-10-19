@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Tic-Tac-Toe Multiplayer",
+    "slug": "tictactoe-multiplayer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#6200ee"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lila.tictactoe"
+    },
+    "android": {
+      "package": "com.lila.tictactoe"
+    }
+  }
+}
+
