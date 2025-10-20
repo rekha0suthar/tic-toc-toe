@@ -10,11 +10,6 @@ export const mongodb = {
     useUnifiedTopology: true,
   }
 };
-export const redis = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || null,
-};
 export const cors = {
   origin: process.env.CORS_ORIGIN || '*',
   credentials: true
