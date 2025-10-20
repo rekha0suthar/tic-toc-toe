@@ -1,274 +1,340 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  Dimensions
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, StatusBar, SafeAreaView } from 'react-native';
 import { useSocket } from '../context/SocketContext';
 import { useUser } from '../context/UserContext';
+import { useNavigation } from '@react-navigation/native';
+import theme from '../styles/theme';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const CELL_SIZE = (SCREEN_WIDTH - 60) / 3;
-
-export default function GameScreen({ route, navigation }) {
-  const { gameId, opponent, yourSymbol } = route.params;
+const GameScreen = ({ route }) => {
+  const { gameId: initialGameId, opponent: initialOpponent, yourSymbol: initialYourSymbol } = route.params;
   const { socket } = useSocket();
   const { user } = useUser();
+  const navigation = useNavigation();
 
+  const [gameId, setGameId] = useState(initialGameId);
   const [board, setBoard] = useState([
     ['', '', ''],
     ['', '', ''],
     ['', '', '']
   ]);
   const [currentTurn, setCurrentTurn] = useState('X');
+  const [yourSymbol, setYourSymbol] = useState(initialYourSymbol);
+  const [opponent, setOpponent] = useState(initialOpponent);
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState(null);
   const [isDraw, setIsDraw] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Redirect if no user
+  useEffect(() => {
+    if (!user) {
+      navigation.replace('Login');
+    }
+  }, [user, navigation]);
 
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('moveMade', handleMoveMade);
-    socket.on('gameStarted', handleGameStarted);
-    socket.on('error', handleError);
+    socket.on('moveMade', (data) => {
+      console.log('Move made:', data);
+      setBoard(data.board);
+      setCurrentTurn(data.currentTurn);
+      setGameOver(data.gameOver);
+      setWinner(data.winner);
+      setIsDraw(data.isDraw);
+      setErrorMessage('');
+
+      if (data.gameOver) {
+        setTimeout(() => {
+          let message = '';
+          if (data.isDraw) {
+            message = "It's a Draw!";
+          } else if (data.winner && data.winner.userId === user.userId) {
+            message = 'You Win! +200 pts';
+          } else {
+            message = 'You Lose!';
+          }
+          Alert.alert('Game Over', message, [
+            { text: 'OK', onPress: () => navigation.navigate('Home') }
+          ]);
+        }, 500);
+      }
+    });
+
+    socket.on('gameEnded', (data) => {
+      console.log('Game ended:', data);
+      Alert.alert('Game Ended', data.message, [
+        { text: 'OK', onPress: () => navigation.navigate('Home') }
+      ]);
+    });
+
+    socket.on('error', (data) => {
+      console.error('Game error:', data.message);
+      setErrorMessage(data.message);
+    });
 
     return () => {
-      socket.off('moveMade', handleMoveMade);
-      socket.off('gameStarted', handleGameStarted);
-      socket.off('error', handleError);
+      socket.off('moveMade');
+      socket.off('gameEnded');
+      socket.off('error');
     };
-  }, [socket]);
+  }, [socket, user, navigation]);
 
-  const handleGameStarted = (data) => {
-    setBoard(data.board);
-    setCurrentTurn(data.currentTurn);
-  };
-
-  const handleMoveMade = (data) => {
-    setBoard(data.board);
-    setCurrentTurn(data.currentTurn);
-
-    if (data.gameOver) {
-      setGameOver(true);
-      setIsDraw(data.isDraw);
-      setWinner(data.winner);
-
-      setTimeout(() => {
-        if (data.isDraw) {
-          Alert.alert('Game Over', "It's a draw!", [
-            { text: 'OK', onPress: () => navigation.goBack() }
-          ]);
-        } else if (data.winner.userId === user.userId) {
-          Alert.alert('Congratulations!', 'You won! 🎉', [
-            { text: 'OK', onPress: () => navigation.goBack() }
-          ]);
-        } else {
-          Alert.alert('Game Over', 'You lost. Better luck next time!', [
-            { text: 'OK', onPress: () => navigation.goBack() }
-          ]);
-        }
-      }, 500);
-    }
-  };
-
-  const handleError = (error) => {
-    Alert.alert('Error', error.message || 'Something went wrong');
-  };
-
-  const handleCellPress = (row, col) => {
-    if (gameOver) return;
-    if (board[row][col] !== '') return;
-    if (currentTurn !== yourSymbol) {
-      Alert.alert('Not your turn', "Wait for your opponent's move");
+  const handlePress = (row, col) => {
+    if (gameOver || board[row][col] !== '' || currentTurn !== yourSymbol) {
+      if (board[row][col] !== '') {
+        setErrorMessage('Cell already taken');
+        setTimeout(() => setErrorMessage(''), 2000);
+      }
       return;
     }
 
-    socket.emit('makeMove', {
-      gameId,
-      userId: user.userId,
-      row,
-      col
-    });
+    socket.emit('makeMove', { gameId, userId: user.userId, row, col });
   };
 
   const renderCell = (row, col) => {
-    const value = board[row][col];
-    const isMySymbol = value === yourSymbol;
+    const cellValue = board[row][col];
+    const isWinningCell = winner && winner.winningLine && winner.winningLine.some(
+      (cell) => cell[0] === row && cell[1] === col
+    );
 
     return (
       <TouchableOpacity
         key={`${row}-${col}`}
-        style={styles.cell}
-        onPress={() => handleCellPress(row, col)}
-        disabled={gameOver || value !== ''}
+        style={[
+          styles.cell,
+          isWinningCell && styles.winningCell,
+        ]}
+        onPress={() => handlePress(row, col)}
+        disabled={gameOver || cellValue !== '' || currentTurn !== yourSymbol}
       >
-        <Text style={[
-          styles.cellText,
-          isMySymbol ? styles.mySymbol : styles.opponentSymbol
-        ]}>
-          {value}
-        </Text>
+        {cellValue === 'X' && (
+          <View style={styles.xMark}>
+            <View style={[styles.xLine, styles.xLine1]} />
+            <View style={[styles.xLine, styles.xLine2]} />
+          </View>
+        )}
+        {cellValue === 'O' && (
+          <View style={styles.oMark} />
+        )}
       </TouchableOpacity>
     );
   };
 
-  const renderRow = (rowIndex) => {
+  // Loading state
+  if (!user) {
     return (
-      <View key={rowIndex} style={styles.row}>
-        {[0, 1, 2].map(colIndex => renderCell(rowIndex, colIndex))}
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+      </SafeAreaView>
     );
-  };
-
-  const isMyTurn = currentTurn === yourSymbol && !gameOver;
+  }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.playerInfo}>
-          <Text style={styles.playerName}>You ({yourSymbol})</Text>
-          <View style={[styles.turnIndicator, isMyTurn && styles.activeTurn]} />
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+      <View style={styles.container}>
+      
+      {/* Header with Title */}
+      <Text style={styles.title}>Tic-Tac-Toe</Text>
+
+      {/* Player Indicators */}
+      <View style={styles.playersContainer}>
+        {/* You */}
+        <View style={styles.playerSection}>
+          <View style={[
+            styles.playerCircle,
+            yourSymbol === currentTurn && styles.playerCircleActive,
+            { borderColor: theme.colors.orange }
+          ]}>
+            <View style={[
+              styles.playerCircleFill,
+              { backgroundColor: theme.colors.orange }
+            ]} />
+          </View>
+          <Text style={styles.playerLabel}>You</Text>
         </View>
-        <Text style={styles.vs}>VS</Text>
-        <View style={styles.playerInfo}>
-          <Text style={styles.playerName}>
-            {opponent.username} ({yourSymbol === 'X' ? 'O' : 'X'})
+
+        {/* Turn Indicator */}
+        <View style={styles.turnIndicator}>
+          <Text style={styles.turnText}>
+            Your turn — {yourSymbol}
           </Text>
-          <View style={[styles.turnIndicator, !isMyTurn && !gameOver && styles.activeTurn]} />
+        </View>
+
+        {/* Opponent */}
+        <View style={styles.playerSection}>
+          <View style={[
+            styles.playerCircle,
+            opponent.symbol === currentTurn && styles.playerCircleActive,
+            { borderColor: theme.colors.purple }
+          ]}>
+            <View style={[
+              styles.playerCircleFill,
+              { backgroundColor: theme.colors.purple }
+            ]} />
+          </View>
+          <Text style={styles.playerLabel}>Opponent</Text>
         </View>
       </View>
 
-      <View style={styles.turnIndicatorContainer}>
-        <Text style={styles.turnText}>
-          {gameOver
-            ? (isDraw ? "It's a Draw!" : `${winner?.username} Wins!`)
-            : isMyTurn
-            ? 'Your Turn'
-            : "Opponent's Turn"
-          }
-        </Text>
+      {/* Game Board */}
+      <View style={styles.boardContainer}>
+        <View style={styles.board}>
+          {board.map((row, rowIndex) => (
+            <View key={rowIndex} style={styles.row}>
+              {row.map((cell, colIndex) => renderCell(rowIndex, colIndex))}
+            </View>
+          ))}
+        </View>
       </View>
 
-      <View style={styles.board}>
-        {[0, 1, 2].map(rowIndex => renderRow(rowIndex))}
+      {/* Error Message */}
+      {errorMessage ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        </View>
+      ) : null}
       </View>
-
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => {
-          Alert.alert(
-            'Leave Game',
-            'Are you sure you want to leave this game?',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Leave', onPress: () => navigation.goBack(), style: 'destructive' }
-            ]
-          );
-        }}
-      >
-        <Text style={styles.backButtonText}>Back to Home</Text>
-      </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 20,
+    backgroundColor: theme.colors.background,
+    paddingTop: 20,
+    paddingHorizontal: 20,
   },
-  header: {
+  title: {
+    fontSize: 24,
+    fontWeight: theme.typography.bold,
+    color: theme.colors.textPrimary,
+    marginBottom: 40,
+  },
+  playersContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-    elevation: 3,
+    marginBottom: 60,
+    paddingHorizontal: 10,
   },
-  playerInfo: {
-    flex: 1,
+  playerSection: {
     alignItems: 'center',
+    gap: 12,
   },
-  playerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 5,
+  playerCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  playerCircleActive: {
+    borderWidth: 4,
+  },
+  playerCircleFill: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  playerLabel: {
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    fontWeight: theme.typography.medium,
   },
   turnIndicator: {
-    width: 30,
-    height: 6,
-    backgroundColor: '#ccc',
-    borderRadius: 3,
-  },
-  activeTurn: {
-    backgroundColor: '#6200ee',
-  },
-  vs: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#666',
-    marginHorizontal: 10,
-  },
-  turnIndicatorContainer: {
-    backgroundColor: '#6200ee',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 20,
+    backgroundColor: theme.colors.card,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   turnText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    fontWeight: theme.typography.medium,
+  },
+  boardContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
   },
   board: {
-    alignSelf: 'center',
-    backgroundColor: '#333',
-    padding: 5,
-    borderRadius: 10,
-    marginBottom: 20,
+    width: '100%',
+    maxWidth: 400,
+    aspectRatio: 1,
+    backgroundColor: theme.colors.boardBackground,
+    borderRadius: 16,
+    padding: 10,
   },
   row: {
+    flex: 1,
     flexDirection: 'row',
   },
   cell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
-    backgroundColor: '#fff',
-    margin: 2.5,
+    flex: 1,
+    margin: 4,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: theme.colors.boardGrid,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 5,
   },
-  cellText: {
-    fontSize: 60,
-    fontWeight: 'bold',
+  winningCell: {
+    backgroundColor: 'rgba(251, 191, 36, 0.2)',
+    borderColor: theme.colors.orange,
   },
-  mySymbol: {
-    color: '#6200ee',
-  },
-  opponentSymbol: {
-    color: '#cf6679',
-  },
-  backButton: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
+  xMark: {
+    width: '60%',
+    height: '60%',
+    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#6200ee',
   },
-  backButtonText: {
-    color: '#6200ee',
-    fontSize: 16,
-    fontWeight: 'bold',
+  xLine: {
+    position: 'absolute',
+    width: '100%',
+    height: 6,
+    backgroundColor: theme.colors.cyan,
+    borderRadius: 3,
+  },
+  xLine1: {
+    transform: [{ rotate: '45deg' }],
+  },
+  xLine2: {
+    transform: [{ rotate: '-45deg' }],
+  },
+  oMark: {
+    width: '60%',
+    height: '60%',
+    borderRadius: 100,
+    borderWidth: 6,
+    borderColor: theme.colors.purple,
+  },
+  errorContainer: {
+    backgroundColor: theme.colors.card,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.error,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  errorText: {
+    color: theme.colors.error,
+    fontSize: 14,
+    fontWeight: theme.typography.medium,
+    textAlign: 'center',
   },
 });
 
+export default GameScreen;

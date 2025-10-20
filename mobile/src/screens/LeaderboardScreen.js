@@ -5,11 +5,15 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  StatusBar,
+  TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
 import { API_URL } from '../config/constants';
+import theme from '../styles/theme';
 
-export default function LeaderboardScreen() {
+export default function LeaderboardScreen({ navigation }) {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,182 +40,184 @@ export default function LeaderboardScreen() {
     fetchLeaderboard();
   };
 
-  const renderItem = ({ item }) => {
-    const isTopThree = item.rank <= 3;
-    const medal = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : '';
+  const renderHeader = () => (
+    <View style={styles.tableHeader}>
+      <Text style={[styles.headerText, styles.rankColumn]}>#</Text>
+      <Text style={[styles.headerText, styles.nameColumn]}>Name</Text>
+      <Text style={[styles.headerText, styles.recordColumn]}>W/L/D</Text>
+      <Text style={[styles.headerText, styles.scoreColumn]}>Score</Text>
+    </View>
+  );
+
+  const renderItem = ({ item, index }) => {
+    const isTopPlayer = index === 0;
 
     return (
-      <View style={[styles.item, isTopThree && styles.topThreeItem]}>
-        <View style={styles.rankContainer}>
-          <Text style={[styles.rank, isTopThree && styles.topThreeRank]}>
-            {medal || `#${item.rank}`}
-          </Text>
-        </View>
-        
-        <View style={styles.playerInfo}>
-          <Text style={[styles.username, isTopThree && styles.topThreeUsername]}>
-            {item.username}
-          </Text>
-          <View style={styles.stats}>
-            <Text style={styles.stat}>
-              Wins: {item.gamesWon}/{item.gamesPlayed}
-            </Text>
-            <Text style={styles.stat}>
-              Win Rate: {item.winRate.toFixed(1)}%
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.scoreContainer}>
-          <Text style={[styles.score, isTopThree && styles.topThreeScore]}>
-            {item.totalScore}
-          </Text>
-          <Text style={styles.scoreLabel}>pts</Text>
-        </View>
+      <View style={[styles.tableRow, isTopPlayer && styles.topPlayerRow]}>
+        <Text style={[styles.cellText, styles.rankColumn, isTopPlayer && styles.topPlayerText]}>
+          {item.rank}
+        </Text>
+        <Text style={[styles.cellText, styles.nameColumn, isTopPlayer && styles.topPlayerText]}>
+          {item.username}
+        </Text>
+        <Text style={[styles.cellText, styles.recordColumn, isTopPlayer && styles.topPlayerText]}>
+          {item.gamesWon}/{item.gamesLost}/{item.gamesDraw}
+        </Text>
+        <Text style={[styles.cellText, styles.scoreColumn, isTopPlayer && styles.topPlayerText]}>
+          {item.totalScore}
+        </Text>
       </View>
     );
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6200ee" />
-        <Text style={styles.loadingText}>Loading leaderboard...</Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.cyan} />
+          <Text style={styles.loadingText}>Loading leaderboard...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+      <View style={styles.container}>
+
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🏆 Top Players</Text>
-        <Text style={styles.headerSubtitle}>
-          Compete to reach the top!
-        </Text>
+        <Text style={styles.title}>Leaderboard</Text>
       </View>
 
-      <FlatList
-        data={leaderboard}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.rank.toString()}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No players yet</Text>
-          </View>
-        }
-      />
-    </View>
+      {/* Table */}
+      <View style={styles.tableContainer}>
+        <FlatList
+          data={leaderboard}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.rank.toString()}
+          ListHeaderComponent={renderHeader}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={theme.colors.cyan}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No players yet</Text>
+            </View>
+          }
+          contentContainerStyle={styles.listContent}
+        />
+      </View>
+
+      {/* Back Button */}
+      <TouchableOpacity
+        style={styles.backButtonContainer}
+        onPress={() => navigation.goBack()}
+        activeOpacity={0.9}
+      >
+        <View style={styles.backButton}>
+          <Text style={styles.backButtonText}>Back</Text>
+        </View>
+      </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
+    paddingTop: 20,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
+    fontWeight: theme.typography.medium,
   },
   header: {
-    backgroundColor: '#6200ee',
-    padding: 20,
-    alignItems: 'center',
+    paddingHorizontal: 30,
+    marginBottom: 30,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 5,
+  title: {
+    fontSize: 32,
+    fontWeight: theme.typography.bold,
+    color: theme.colors.textPrimary,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#fff',
-    opacity: 0.9,
-  },
-  list: {
-    padding: 15,
-  },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  topThreeItem: {
-    backgroundColor: '#fff8e1',
-    borderWidth: 2,
-    borderColor: '#ffd54f',
-  },
-  rankContainer: {
-    width: 50,
-    alignItems: 'center',
-  },
-  rank: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#666',
-  },
-  topThreeRank: {
-    fontSize: 24,
-    color: '#ff6f00',
-  },
-  playerInfo: {
+  tableContainer: {
     flex: 1,
-    marginLeft: 10,
+    marginHorizontal: 20,
+    backgroundColor: theme.colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: 'hidden',
   },
-  username: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+  listContent: {
+    paddingBottom: 20,
   },
-  topThreeUsername: {
-    fontSize: 20,
-    color: '#ff6f00',
-  },
-  stats: {
+  tableHeader: {
     flexDirection: 'row',
-    gap: 15,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: theme.colors.backgroundLight,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
-  stat: {
-    fontSize: 12,
-    color: '#666',
+  headerText: {
+    fontSize: 14,
+    fontWeight: theme.typography.bold,
+    color: theme.colors.textSecondary,
   },
-  scoreContainer: {
-    alignItems: 'center',
-    marginLeft: 10,
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderDark,
   },
-  score: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#6200ee',
+  topPlayerRow: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
-  topThreeScore: {
-    fontSize: 28,
-    color: '#ff6f00',
+  cellText: {
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    fontWeight: theme.typography.medium,
   },
-  scoreLabel: {
-    fontSize: 12,
-    color: '#666',
+  topPlayerText: {
+    fontWeight: theme.typography.bold,
+    color: theme.colors.textPrimary,
+  },
+  rankColumn: {
+    width: 40,
+  },
+  nameColumn: {
+    flex: 1,
+  },
+  recordColumn: {
+    width: 80,
+    textAlign: 'right',
+  },
+  scoreColumn: {
+    width: 60,
+    textAlign: 'right',
   },
   emptyContainer: {
     padding: 40,
@@ -219,7 +225,25 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
+  },
+  backButtonContainer: {
+    marginHorizontal: 30,
+    marginVertical: 20,
+  },
+  backButton: {
+    backgroundColor: theme.colors.cyan,
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ skewX: '-8deg' }],
+    ...theme.shadows.cyan,
+  },
+  backButtonText: {
+    color: theme.colors.black,
+    fontSize: 18,
+    fontWeight: theme.typography.bold,
+    transform: [{ skewX: '8deg' }],
   },
 });
-

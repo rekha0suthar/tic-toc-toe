@@ -4,17 +4,28 @@
     "slug": "tictactoe-multiplayer",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#1a2332",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#6200ee"
+      "backgroundColor": "#1a2332"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lila.tictactoe"
+      "bundleIdentifier": "com.lila.tictactoe",
+      "infoPlist": {
+        "UIStatusBarStyle": "UIStatusBarStyleLightContent"
+      }
     },
     "android": {
-      "package": "com.lila.tictactoe"
+      "package": "com.lila.tictactoe",
+      "adaptiveIcon": {
+        "backgroundColor": "#1a2332"
+      },
+      "statusBar": {
+        "barStyle": "light-content",
+        "backgroundColor": "#1a2332"
+      }
     }
   }
 }

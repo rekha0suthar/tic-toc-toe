@@ -7,25 +7,36 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-  ActivityIndicator
+  StatusBar,
+  Animated,
+  SafeAreaView,
 } from 'react-native';
 import { useUser } from '../context/UserContext';
 import { API_URL } from '../config/constants';
+import theme from '../styles/theme';
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useUser();
+  const [fadeAnim] = useState(new Animated.Value(0));
+
+  React.useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const handleLogin = async () => {
-    if (!username.trim()) {
-      Alert.alert('Error', 'Please enter a username');
+    const trimmed = username.trim();
+    
+    if (!trimmed) {
       return;
     }
 
-    if (username.length < 3) {
-      Alert.alert('Error', 'Username must be at least 3 characters long');
+    if (trimmed.length < 2) {
       return;
     }
 
@@ -37,7 +48,7 @@ export default function LoginScreen({ navigation }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username: username.trim() }),
+        body: JSON.stringify({ username: trimmed }),
       });
 
       const data = await response.json();
@@ -45,113 +56,124 @@ export default function LoginScreen({ navigation }) {
       if (response.ok) {
         await login(data.userId, data.username);
         navigation.replace('Home');
-      } else {
-        Alert.alert('Error', data.error || 'Failed to login');
       }
     } catch (error) {
       console.error('Login error:', error);
-      Alert.alert('Error', 'Failed to connect to server. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.content}>
-        <Text style={styles.title}>Tic-Tac-Toe</Text>
-        <Text style={styles.subtitle}>Multiplayer Game</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+          {/* Title */}
+          <Text style={styles.title}>Who are you?</Text>
 
-        <View style={styles.inputContainer}>
+          {/* Input */}
           <TextInput
             style={styles.input}
-            placeholder="Enter your username"
+            placeholder="Nickname"
+            placeholderTextColor={theme.colors.textMuted}
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
             maxLength={20}
             editable={!loading}
+            returnKeyType="done"
+            onSubmitEditing={handleLogin}
           />
-        </View>
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Play Now</Text>
-          )}
-        </TouchableOpacity>
+          {/* Skewed Button */}
+          <TouchableOpacity
+            style={styles.buttonContainer}
+            onPress={handleLogin}
+            disabled={loading || !username.trim()}
+            activeOpacity={0.9}
+          >
+            <View style={[
+              styles.button, 
+              (!username.trim() || loading) && styles.buttonDisabled
+            ]}>
+              <Text style={styles.buttonText}>
+                {loading ? 'Connecting...' : 'Continue'}
+              </Text>
+            </View>
+          </TouchableOpacity>
 
-        <Text style={styles.infoText}>
-          Create or join games with players worldwide
-        </Text>
-      </View>
-    </KeyboardAvoidingView>
+          {/* Subtitle */}
+          <Text style={styles.subtitle}>Shown to your opponent.</Text>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#6200ee',
+    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 40,
   },
   title: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 24,
-    color: '#fff',
-    marginBottom: 50,
-    opacity: 0.9,
-  },
-  inputContainer: {
-    width: '100%',
-    marginBottom: 20,
+    fontSize: 42,
+    fontWeight: theme.typography.bold,
+    color: theme.colors.textPrimary,
+    marginBottom: 60,
+    textAlign: 'center',
   },
   input: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    fontSize: 16,
     width: '100%',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    padding: 18,
+    fontSize: theme.typography.base,
+    color: theme.colors.textPrimary,
+    marginBottom: 40,
   },
-  button: {
-    backgroundColor: '#03dac6',
-    padding: 15,
-    borderRadius: 10,
-    width: '100%',
-    alignItems: 'center',
+  buttonContainer: {
+    width: '85%',
     marginBottom: 20,
   },
+  button: {
+    backgroundColor: theme.colors.cyan,
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ skewX: '-8deg' }],
+    ...theme.shadows.cyan,
+  },
   buttonDisabled: {
-    opacity: 0.6,
+    backgroundColor: theme.colors.cardLight,
+    opacity: 0.5,
   },
   buttonText: {
-    color: '#000',
+    color: theme.colors.black,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: theme.typography.bold,
+    transform: [{ skewX: '8deg' }],
   },
-  infoText: {
-    color: '#fff',
-    fontSize: 14,
+  subtitle: {
+    fontSize: theme.typography.base,
+    color: theme.colors.textSecondary,
     textAlign: 'center',
-    opacity: 0.8,
+    marginTop: 10,
   },
 });
-

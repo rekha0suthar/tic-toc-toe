@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SocketProvider } from './src/context/SocketContext';
 import { UserProvider } from './src/context/UserContext';
+import theme from './src/styles/theme';
 
 // Screens
 import HomeScreen from './src/screens/HomeScreen';
@@ -13,6 +14,20 @@ import LeaderboardScreen from './src/screens/LeaderboardScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 
 const Stack = createStackNavigator();
+
+// Dark theme for navigation
+const DarkNavigationTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: theme.colors.cyan,
+    background: theme.colors.background,
+    card: theme.colors.background,
+    text: theme.colors.textPrimary,
+    border: theme.colors.border,
+    notification: theme.colors.cyan,
+  },
+};
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -44,43 +59,33 @@ export default function App() {
   return (
     <UserProvider>
       <SocketProvider>
-        <NavigationContainer>
+        <NavigationContainer theme={DarkNavigationTheme}>
           <Stack.Navigator
             initialRouteName={isLoggedIn ? 'Home' : 'Login'}
             screenOptions={{
-              headerStyle: {
-                backgroundColor: '#6200ee',
-              },
-              headerTintColor: '#fff',
-              headerTitleStyle: {
-                fontWeight: 'bold',
-              },
+              headerShown: false,
+              cardStyle: { backgroundColor: theme.colors.background },
             }}
           >
             <Stack.Screen 
               name="Login" 
               component={LoginScreen}
-              options={{ headerShown: false }}
             />
             <Stack.Screen 
               name="Home" 
               component={HomeScreen}
-              options={{ title: 'Tic-Tac-Toe' }}
             />
             <Stack.Screen 
               name="Game" 
               component={GameScreen}
-              options={{ title: 'Game' }}
             />
             <Stack.Screen 
               name="Leaderboard" 
               component={LeaderboardScreen}
-              options={{ title: 'Leaderboard' }}
             />
             <Stack.Screen 
               name="Profile" 
               component={ProfileScreen}
-              options={{ title: 'Profile' }}
             />
           </Stack.Navigator>
         </NavigationContainer>
