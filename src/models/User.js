@@ -9,14 +9,6 @@ const userSchema = new Schema({
     minlength: 3,
     maxlength: 20
   },
-  email: {
-    type: String,
-    required: false,
-    unique: true,
-    sparse: true,
-    trim: true,
-    lowercase: true
-  },
   socketId: {
     type: String,
     default: null
@@ -46,7 +38,7 @@ const userSchema = new Schema({
 });
 
 // Calculate win rate before saving
-userSchema.pre('save', function(next) {
+userSchema.pre('save', function (next) {
   if (this.stats.gamesPlayed > 0) {
     this.stats.winRate = (this.stats.gamesWon / this.stats.gamesPlayed) * 100;
   }
@@ -54,9 +46,9 @@ userSchema.pre('save', function(next) {
 });
 
 // Instance method to update stats
-userSchema.methods.updateStats = function(result) {
+userSchema.methods.updateStats = function (result) {
   this.stats.gamesPlayed += 1;
-  
+
   if (result === 'win') {
     this.stats.gamesWon += 1;
     this.stats.totalScore += 3;
@@ -66,10 +58,10 @@ userSchema.methods.updateStats = function(result) {
     this.stats.gamesDraw += 1;
     this.stats.totalScore += 1;
   }
-  
+
   this.stats.winRate = (this.stats.gamesWon / this.stats.gamesPlayed) * 100;
   this.lastActive = Date.now();
-  
+
   return this.save();
 };
 

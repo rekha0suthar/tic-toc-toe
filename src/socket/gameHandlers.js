@@ -27,14 +27,14 @@ export default (io, socket) => {
       if (result.matched) {
         // Game found immediately
         const game = result.game;
-        
+
         // Join both players to game room for faster broadcasting
         const player1Socket = io.sockets.sockets.get(game.players[0].socketId);
         const player2Socket = io.sockets.sockets.get(game.players[1].socketId);
-        
+
         if (player1Socket) player1Socket.join(game.gameId);
         if (player2Socket) player2Socket.join(game.gameId);
-        
+
         // Notify both players
         io.to(game.players[0].socketId).emit('gameFound', {
           gameId: game.gameId,
@@ -80,73 +80,6 @@ export default (io, socket) => {
     }
   });
 
-  /**
-   * Create a private game
-   */
-  socket.on('createPrivateGame', async (data) => {
-    try {
-      const { userId, username } = data;
-
-      const game = await MatchmakingService.createPrivateGame(userId, username, socket.id);
-
-      socket.emit('privateGameCreated', {
-        gameId: game.gameId,
-        message: 'Private game created. Share the game ID with your friend!'
-      });
-
-      logger.info(`Private game ${game.gameId} created by ${username}`);
-    } catch (error) {
-      logger.error('Error creating private game:', error);
-      socket.emit('error', { message: 'Failed to create private game' });
-    }
-  });
-
-  /**
-   * Join a private game
-   */
-  socket.on('joinPrivateGame', async (data) => {
-    try {
-      const { gameId, userId, username } = data;
-
-      const result = await MatchmakingService.joinPrivateGame(gameId, userId, username, socket.id);
-
-      if (!result.success) {
-        socket.emit('error', { message: result.error });
-        return;
-      }
-
-      const game = result.game;
-
-      // Join both players to game room
-      const player1Socket = io.sockets.sockets.get(game.players[0].socketId);
-      const player2Socket = io.sockets.sockets.get(game.players[1].socketId);
-      
-      if (player1Socket) player1Socket.join(game.gameId);
-      if (player2Socket) player2Socket.join(game.gameId);
-
-      // Notify both players
-      io.to(game.players[0].socketId).emit('gameStarted', {
-        gameId: game.gameId,
-        opponent: game.players[1],
-        yourSymbol: game.players[0].symbol,
-        board: game.board,
-        currentTurn: game.currentTurn
-      });
-
-      io.to(game.players[1].socketId).emit('gameStarted', {
-        gameId: game.gameId,
-        opponent: game.players[0],
-        yourSymbol: game.players[1].symbol,
-        board: game.board,
-        currentTurn: game.currentTurn
-      });
-
-      logger.info(`Player ${username} joined private game ${gameId}`);
-    } catch (error) {
-      logger.error('Error joining private game:', error);
-      socket.emit('error', { message: 'Failed to join private game' });
-    }
-  });
 
   /**
    * Player makes a move
@@ -226,7 +159,7 @@ export default (io, socket) => {
           }
 
           // Update leaderboard ranks in background (don't block)
-          LeaderboardService.updateAllRanks().catch(err => 
+          LeaderboardService.updateAllRanks().catch(err =>
             logger.error('Error updating ranks:', err)
           );
         }).catch(err => logger.error('Error saving game:', err));
@@ -253,7 +186,7 @@ export default (io, socket) => {
 
       // Update user status
       const user = await User.findOne({ socketId: socket.id });
-      
+
       if (user) {
         user.isOnline = false;
         user.lastActive = Date.now();
@@ -269,32 +202,5 @@ export default (io, socket) => {
     }
   });
 
-  /**
-   * Get leaderboard
-   */
-  socket.on('getLeaderboard', async (data) => {
-    try {
-      const { limit = 100 } = data || {};
-      const leaderboard = await LeaderboardService.getTopPlayers(limit);
-      socket.emit('leaderboard', leaderboard);
-    } catch (error) {
-      logger.error('Error fetching leaderboard:', error);
-      socket.emit('error', { message: 'Failed to fetch leaderboard' });
-    }
-  });
-
-  /**
-   * Get player stats
-   */
-  socket.on('getPlayerStats', async (data) => {
-    try {
-      const { userId } = data;
-      const stats = await LeaderboardService.getPlayerRank(userId);
-      socket.emit('playerStats', stats);
-    } catch (error) {
-      logger.error('Error fetching player stats:', error);
-      socket.emit('error', { message: 'Failed to fetch player stats' });
-    }
-  });
 };
 

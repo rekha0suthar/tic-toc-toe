@@ -50,7 +50,7 @@ const GameScreen = ({ route }) => {
           if (data.isDraw) {
             message = "It's a Draw!";
           } else if (data.winner && data.winner.userId === user.userId) {
-            message = 'You Win! +200 pts';
+            message = 'You Win! +3 pts';
           } else {
             message = 'You Lose!';
           }
@@ -134,67 +134,67 @@ const GameScreen = ({ route }) => {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
       <View style={styles.container}>
-      
-      {/* Header with Title */}
-      <Text style={styles.title}>Tic-Tac-Toe</Text>
 
-      {/* Player Indicators */}
-      <View style={styles.playersContainer}>
-        {/* You */}
-        <View style={styles.playerSection}>
-          <View style={[
-            styles.playerCircle,
-            yourSymbol === currentTurn && styles.playerCircleActive,
-            { borderColor: theme.colors.orange }
-          ]}>
+        {/* Header with Title */}
+        <Text style={styles.title}>Tic-Tac-Toe</Text>
+
+        {/* Player Indicators */}
+        <View style={styles.playersContainer}>
+          {/* You */}
+          <View style={styles.playerSection}>
             <View style={[
-              styles.playerCircleFill,
-              { backgroundColor: theme.colors.orange }
-            ]} />
-          </View>
-          <Text style={styles.playerLabel}>You</Text>
-        </View>
-
-        {/* Turn Indicator */}
-        <View style={styles.turnIndicator}>
-          <Text style={styles.turnText}>
-            Your turn — {yourSymbol}
-          </Text>
-        </View>
-
-        {/* Opponent */}
-        <View style={styles.playerSection}>
-          <View style={[
-            styles.playerCircle,
-            opponent.symbol === currentTurn && styles.playerCircleActive,
-            { borderColor: theme.colors.purple }
-          ]}>
-            <View style={[
-              styles.playerCircleFill,
-              { backgroundColor: theme.colors.purple }
-            ]} />
-          </View>
-          <Text style={styles.playerLabel}>Opponent</Text>
-        </View>
-      </View>
-
-      {/* Game Board */}
-      <View style={styles.boardContainer}>
-        <View style={styles.board}>
-          {board.map((row, rowIndex) => (
-            <View key={rowIndex} style={styles.row}>
-              {row.map((cell, colIndex) => renderCell(rowIndex, colIndex))}
+              styles.playerCircle,
+              yourSymbol === currentTurn && styles.playerCircleActive,
+              { borderColor: theme.colors.orange }
+            ]}>
+              <View style={[
+                styles.playerCircleFill,
+                { backgroundColor: theme.colors.orange }
+              ]} />
             </View>
-          ))}
-        </View>
-      </View>
+            <Text style={styles.playerLabel}>You</Text>
+          </View>
 
-      {/* Error Message */}
-      {errorMessage ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{errorMessage}</Text>
+          {/* Turn Indicator */}
+          <View style={styles.turnIndicator}>
+            <Text style={styles.turnText}>
+              Your turn — {yourSymbol}
+            </Text>
+          </View>
+
+          {/* Opponent */}
+          <View style={styles.playerSection}>
+            <View style={[
+              styles.playerCircle,
+              opponent.symbol === currentTurn && styles.playerCircleActive,
+              { borderColor: theme.colors.purple }
+            ]}>
+              <View style={[
+                styles.playerCircleFill,
+                { backgroundColor: theme.colors.purple }
+              ]} />
+            </View>
+            <Text style={styles.playerLabel}>Opponent</Text>
+          </View>
         </View>
-      ) : null}
+
+        {/* Game Board */}
+        <View style={styles.boardContainer}>
+          <View style={styles.board}>
+            {board.map((row, rowIndex) => (
+              <View key={rowIndex} style={styles.row}>
+                {row.map((cell, colIndex) => renderCell(rowIndex, colIndex))}
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Error Message */}
+        {errorMessage ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        ) : null}
       </View>
     </SafeAreaView>
   );

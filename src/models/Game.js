@@ -9,7 +9,7 @@ const gameSchema = new Schema({
   status: {
     type: String,
     enum: ['waiting', 'active', 'completed', 'abandoned'],
-    default: 'waiting'
+    default: 'active'
   },
   players: [{
     userId: {

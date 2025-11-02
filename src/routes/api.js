@@ -11,7 +11,7 @@ const router = Router();
  */
 router.post('/users', async (req, res) => {
   try {
-    const { username, email } = req.body;
+    const { username } = req.body;
 
     if (!username) {
       return res.status(400).json({ error: 'Username is required' });
@@ -21,7 +21,7 @@ router.post('/users', async (req, res) => {
     let user = await User.findOne({ username });
 
     if (!user) {
-      user = new User({ username, email });
+      user = new User({ username });
       await user.save();
       logger.info(`New user created: ${username}`);
     }
@@ -33,11 +33,11 @@ router.post('/users', async (req, res) => {
     });
   } catch (error) {
     logger.error('Error creating/getting user:', error);
-    
+
     if (error.code === 11000) {
       return res.status(400).json({ error: 'Username already exists' });
     }
-    
+
     res.status(500).json({ error: 'Internal server error' });
   }
 });
